@@ -1,0 +1,685 @@
+<!doctype html>
+<html lang="en">
+<head>
+
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="description" content="58 screens of Simple's Team feed: community portrait, findings and CRM hypotheses.">
+
+<style>
+  html{color-scheme:light dark}
+  :root{padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px)}
+  body{margin:0}
+  img{max-width:100%}
+  [hidden]{display:none!important}
+</style>
+<title>Simple Team Feed Teardown</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+  :root{
+    --ground:#F1F3EC; --surface:#FBFCF8; --surface-2:#EAEEE2;
+    --ink:#1B211A; --ink-2:#55604F; --ink-3:#7C8877;
+    --line:#DCE2D3; --line-strong:#C2CBB5;
+    --accent:#436F38; --accent-ink:#2F5228; --accent-soft:#E4EDDB;
+    --clay:#A94E26; --clay-soft:#F6E6DC;
+    --shadow:0 1px 2px rgba(27,33,26,.06), 0 8px 24px -16px rgba(27,33,26,.30);
+    --display:"Fraunces",Georgia,"Times New Roman",serif;
+    --body:"IBM Plex Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+    --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --ground:#11150F; --surface:#191E17; --surface-2:#212819;
+      --ink:#E9EEE3; --ink-2:#A3AF9C; --ink-3:#83907C;
+      --line:#2B3227; --line-strong:#3C4537;
+      --accent:#93C37C; --accent-ink:#B9D9A8; --accent-soft:#1D2818;
+      --clay:#E09165; --clay-soft:#2C1D14;
+      --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px -20px rgba(0,0,0,.9);
+    }
+  }
+  :root[data-theme="dark"]{
+    --ground:#11150F; --surface:#191E17; --surface-2:#212819;
+    --ink:#E9EEE3; --ink-2:#A3AF9C; --ink-3:#83907C;
+    --line:#2B3227; --line-strong:#3C4537;
+    --accent:#93C37C; --accent-ink:#B9D9A8; --accent-soft:#1D2818;
+    --clay:#E09165; --clay-soft:#2C1D14;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px -20px rgba(0,0,0,.9);
+  }
+
+  body{
+    background:var(--ground); color:var(--ink);
+    font-family:var(--body); font-size:15px; line-height:1.55;
+    -webkit-font-smoothing:antialiased;
+  }
+  *{box-sizing:border-box}
+
+  /* ---------- chrome ---------- */
+  .topbar{
+    position:sticky; top:env(safe-area-inset-top,0px); z-index:20;
+    display:flex; align-items:center; gap:12px; flex-wrap:wrap;
+    padding:10px 16px; background:color-mix(in srgb,var(--ground) 88%, transparent);
+    backdrop-filter:blur(10px); border-bottom:1px solid var(--line);
+  }
+  .mark{display:flex; align-items:baseline; gap:8px; margin-right:auto; min-width:0}
+  .mark b{font-family:var(--display); font-weight:600; font-size:15px; letter-spacing:-.01em; white-space:nowrap}
+  .mark span{font-family:var(--mono); font-size:11px; color:var(--ink-3); letter-spacing:.06em; text-transform:uppercase}
+  .seg{display:flex; border:1px solid var(--line-strong); border-radius:999px; overflow:hidden; background:var(--surface)}
+  .seg button{
+    font:500 11px/1 var(--mono); letter-spacing:.08em; text-transform:uppercase;
+    padding:7px 11px; border:0; background:transparent; color:var(--ink-2); cursor:pointer;
+  }
+  .seg button[aria-pressed="true"]{background:var(--accent); color:#F6F9F2}
+  @media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .seg button[aria-pressed="true"]{color:#11150F}}
+  :root[data-theme="dark"] .seg button[aria-pressed="true"]{color:#11150F}
+
+  /* ---------- stage ---------- */
+  .stage{max-width:940px; margin:0 auto; padding:0 16px; padding-block:28px 132px}
+  .slide[hidden]{display:none!important}
+  .slide{animation:rise .32s ease both}
+  @keyframes rise{from{opacity:.35; transform:translateY(6px)} to{opacity:1; transform:none}}
+  @media (prefers-reduced-motion: reduce){.slide{animation:none}}
+
+  .eyebrow{
+    display:flex; align-items:center; gap:10px; margin-bottom:14px;
+    font:500 11px/1 var(--mono); letter-spacing:.12em; text-transform:uppercase; color:var(--ink-3);
+  }
+  .eyebrow i{font-style:normal; color:var(--accent)}
+  .eyebrow::after{content:""; flex:1; height:1px; background:var(--line)}
+
+  h1{
+    font-family:var(--display); font-weight:600; font-size:clamp(30px,6vw,52px);
+    line-height:1.04; letter-spacing:-.02em; margin:0 0 18px; text-wrap:balance;
+  }
+  h2{
+    font-family:var(--display); font-weight:600; font-size:clamp(23px,4.2vw,36px);
+    line-height:1.1; letter-spacing:-.015em; margin:0 0 14px; text-wrap:balance;
+  }
+  h3{font:600 12px/1.3 var(--mono); letter-spacing:.1em; text-transform:uppercase; color:var(--ink-3); margin:0 0 10px}
+  .lead{font-size:clamp(16px,2.4vw,19px); line-height:1.5; color:var(--ink-2); max-width:62ch; margin:0 0 22px}
+  .lead strong{color:var(--ink); font-weight:600}
+  p{margin:0 0 12px; max-width:68ch}
+
+  /* ---------- pieces ---------- */
+  .grid{display:grid; gap:14px}
+  @media(min-width:720px){ .g2{grid-template-columns:1fr 1fr} .g3{grid-template-columns:repeat(3,1fr)} }
+
+  .card{background:var(--surface); border:1px solid var(--line); border-radius:4px; padding:16px 18px}
+  .card p:last-child{margin-bottom:0}
+
+  .rows{display:grid; gap:0; border-top:1px solid var(--line)}
+  .row{display:grid; gap:2px 18px; padding:11px 0; border-bottom:1px solid var(--line)}
+  @media(min-width:640px){.row{grid-template-columns:150px 1fr}}
+  .row dt{font:500 11px/1.6 var(--mono); letter-spacing:.08em; text-transform:uppercase; color:var(--ink-3)}
+  .row dd{margin:0; color:var(--ink)}
+
+  ol.steps{list-style:none; counter-reset:s; margin:0; padding:0; display:grid; gap:10px}
+  ol.steps li{counter-increment:s; display:grid; grid-template-columns:26px 1fr; gap:12px; align-items:start}
+  ol.steps li::before{
+    content:counter(s); font:500 12px/24px var(--mono); text-align:center;
+    height:24px; border-radius:999px; background:var(--accent-soft); color:var(--accent-ink);
+  }
+  @media (prefers-color-scheme: dark){:root:not([data-theme="light"]) ol.steps li::before{color:var(--accent)}}
+  :root[data-theme="dark"] ol.steps li::before{color:var(--accent)}
+  ol.steps b{font-weight:600}
+
+  ul.plain{margin:0; padding:0; list-style:none; display:grid; gap:9px}
+  ul.plain li{padding-left:16px; position:relative; color:var(--ink-2)}
+  ul.plain li::before{content:""; position:absolute; left:0; top:.62em; width:6px; height:1px; background:var(--line-strong)}
+  ul.plain li b{color:var(--ink); font-weight:600}
+
+  blockquote{
+    margin:0; padding:2px 0 2px 16px; border-left:2px solid var(--accent);
+    font-family:var(--display); font-size:clamp(17px,2.6vw,21px); line-height:1.35; color:var(--ink);
+  }
+  blockquote cite{display:block; margin-top:8px; font:400 12px/1.4 var(--mono); font-style:normal; color:var(--ink-3)}
+
+  .flag{border-left:3px solid var(--clay); background:var(--clay-soft); padding:14px 16px; border-radius:0 4px 4px 0}
+  .flag h3{color:var(--clay)}
+  .flag p{color:var(--ink); margin-bottom:0}
+
+  .stat{display:flex; flex-wrap:wrap; gap:10px 26px; margin:0 0 18px; padding:0; list-style:none}
+  .stat li{display:grid; gap:2px}
+  .stat b{font:600 clamp(24px,4vw,32px)/1 var(--display); letter-spacing:-.02em; font-variant-numeric:tabular-nums}
+  .stat span{font:400 11px/1.3 var(--mono); letter-spacing:.07em; text-transform:uppercase; color:var(--ink-3)}
+
+  .tag{
+    display:inline-block; font:500 11px/1 var(--mono); letter-spacing:.07em; text-transform:uppercase;
+    padding:5px 8px; border-radius:3px; background:var(--accent-soft); color:var(--accent-ink);
+  }
+  @media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .tag{color:var(--accent)}}
+  :root[data-theme="dark"] .tag{color:var(--accent)}
+  .tag.neg{background:var(--clay-soft); color:var(--clay)}
+
+  .cover{padding-block:min(11vh,90px) 0}
+  .cover .byline{
+    margin-top:28px; padding-top:18px; border-top:1px solid var(--line);
+    display:flex; flex-wrap:wrap; gap:6px 22px; font:400 13px/1.5 var(--mono); color:var(--ink-2);
+  }
+  .cover .byline b{font-weight:500; color:var(--ink)}
+
+  /* ---------- nav ---------- */
+  .nav{
+    position:fixed; left:0; right:0; bottom:0; z-index:20;
+    display:flex; align-items:center; gap:10px;
+    padding:10px 16px; padding-bottom:calc(10px + env(safe-area-inset-bottom,0px));
+    background:color-mix(in srgb,var(--ground) 92%, transparent);
+    backdrop-filter:blur(10px); border-top:1px solid var(--line);
+  }
+  .dots{display:flex; gap:5px; margin:0 auto; flex-wrap:wrap; justify-content:center}
+  .dots button{
+    width:22px; height:22px; padding:0; border:0; background:transparent; cursor:pointer;
+    display:grid; place-items:center;
+  }
+  .dots button::after{content:""; width:7px; height:7px; border-radius:999px; background:var(--line-strong); transition:background .15s}
+  .dots button[aria-current="true"]::after{background:var(--accent); width:20px; border-radius:999px}
+  .arrow{
+    font:500 12px/1 var(--mono); letter-spacing:.06em; text-transform:uppercase;
+    padding:9px 14px; border:1px solid var(--line-strong); border-radius:999px;
+    background:var(--surface); color:var(--ink); cursor:pointer; white-space:nowrap;
+  }
+  .arrow:disabled{opacity:.35; cursor:default}
+  button:focus-visible, a:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+  a{color:var(--accent-ink); text-underline-offset:3px}
+  @media (prefers-color-scheme: dark){:root:not([data-theme="light"]) a{color:var(--accent)}}
+  :root[data-theme="dark"] a{color:var(--accent)}
+  @media(max-width:520px){ .arrow{padding:9px 11px} .mark span{display:none} }
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="mark"><b>Simple · Team feed</b><span data-en="Community notes" data-ru="Заметки по ленте">Community notes</span></div>
+  <div class="seg" role="group" aria-label="Language">
+    <button id="lang-en" aria-pressed="true">EN</button>
+    <button id="lang-ru" aria-pressed="false">RU</button>
+  </div>
+</header>
+
+<main class="stage" id="stage">
+
+<!-- ============ 1 ============ -->
+<section class="slide cover" id="s1">
+  <div class="pane" data-lang="en">
+    <div class="eyebrow"><i>01</i> Community notes · September 2026</div>
+    <h1>58 screens of Simple's Team feed, read out of curiosity</h1>
+    <p class="lead">A portrait of the community, the things that surprised me, and what CRM could take from these conversations. Plus a note on what this data does not show.</p>
+    <div class="byline">
+      <span><b>Elena</b></span>
+      <span>CRM &amp; lifecycle marketing</span>
+      <span>elenkar14@gmail.com</span>
+    </div>
+  </div>
+  <div class="pane" data-lang="ru" hidden>
+    <div class="eyebrow"><i>01</i> Заметки по комьюнити · сентябрь 2026</div>
+    <h1>58 скринов ленты Team в Simple, прочитанные из интереса</h1>
+    <p class="lead">Портрет комьюнити, что меня удивило и какую пользу можно извлечь из переписок. Плюс оговорка о том, чего эти данные не показывают.</p>
+    <div class="byline">
+      <span><b>Елена</b></span>
+      <span>CRM и lifecycle-маркетинг</span>
+      <span>elenkar14@gmail.com</span>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 2 ============ -->
+<section class="slide" id="s2" hidden>
+  <div class="pane" data-lang="en">
+    <div class="eyebrow"><i>02</i> The data</div>
+    <h2>What this sample is</h2>
+    <ul class="stat">
+      <li><b>58</b><span>screens</span></li>
+      <li><b>40 min</b><span>of one feed</span></li>
+      <li><b>16.09.26</b><span>07:37–08:17</span></li>
+      <li><b>0</b><span>email / push mentions</span></li>
+    </ul>
+    <div class="grid g2">
+      <div class="card">
+        <h3>Who got into it</h3>
+        <ul class="plain">
+          <li><b>The most engaged users.</b> Streaks run 150–260 days. The quiet majority and churned users are not here.</li>
+          <li><b>Forty minutes of a single day.</b> No seasonality, no lifecycle stages.</li>
+          <li><b>Active people.</b> They read, comment and support each other. Neutral users stay out of view.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>What the data holds</h3>
+        <ul class="plain">
+          <li>Pains in the users' own wording</li>
+          <li>Live language and tone that can go straight into copy</li>
+          <li>Unfiltered reaction to product mechanics</li>
+          <li>Real food patterns and habits</li>
+        </ul>
+      </div>
+    </div>
+    <div class="flag" style="margin-top:14px">
+      <h3>An honest limit</h3>
+      <p>Across all 58 screens there is no mention of email, push, price, subscription, cancellation or the purchase moment. The one commercial touch is Julie pausing Weight Watchers as she starts Simple. On the communications channel this sample gives nothing, so it would need a separate collection.</p>
+    </div>
+  </div>
+  <div class="pane" data-lang="ru" hidden>
+    <div class="eyebrow"><i>02</i> Данные</div>
+    <h2>Что это за выборка</h2>
+    <ul class="stat">
+      <li><b>58</b><span>скринов</span></li>
+      <li><b>40 мин</b><span>одной ленты</span></li>
+      <li><b>16.09.26</b><span>07:37–08:17</span></li>
+      <li><b>0</b><span>упоминаний email и push</span></li>
+    </ul>
+    <div class="grid g2">
+      <div class="card">
+        <h3>Кто сюда попал</h3>
+        <ul class="plain">
+          <li><b>Самые вовлечённые.</b> У активных участников стрики 150–260 дней. Молчаливое большинство и отток сюда не входят.</li>
+          <li><b>Сорок минут одного дня.</b> Без сезонности и стадий жизненного цикла.</li>
+          <li><b>В ленте активные люди.</b> Они читают, комментируют и поддерживают друг друга. Нейтральные пользователи остаются вне поля зрения.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>Что в данных есть</h3>
+        <ul class="plain">
+          <li>Боли в формулировках самих пользователей</li>
+          <li>Живой язык и тон, который можно забрать в копирайтинг</li>
+          <li>Неотфильтрованная реакция на механики продукта</li>
+          <li>Реальные пищевые паттерны и привычки</li>
+        </ul>
+      </div>
+    </div>
+    <div class="flag" style="margin-top:14px">
+      <h3>Честное ограничение</h3>
+      <p>На всех 58 скринах нет ни одного упоминания рассылок, пушей, цены, подписки, отписки и момента покупки. Единственное касание коммерции — Julie ставит на паузу Weight Watchers, начиная Simple. По коммуникационному каналу этот массив не даёт ничего, нужен отдельный сбор.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 3 ============ -->
+<section class="slide" id="s3" hidden>
+  <div class="pane" data-lang="en">
+    <div class="eyebrow"><i>03</i> Audience</div>
+    <h2>The audience is twenty years older than I expected</h2>
+    <dl class="rows">
+      <div class="row"><dt>Age</dt><dd><b>60–80+, core 66–72.</b> Stated in the feed by users themselves: 72, 67, 67, 66, 66, 66, 67 and one “I'm over 80”.</dd></div>
+      <div class="row"><dt>Gender</dt><dd>Mostly women, but there are men too: David, Larry, Bennie, Bear, Jerry, Jennie.</dd></div>
+      <div class="row"><dt>Geography</dt><dd>US — miles, pounds, insurance as a distribution channel, Apple Maps with American streets, Upper Michigan. Metric markets are there as well: Lis counts in kg, Jan asked to switch to kg.</dd></div>
+      <div class="row"><dt>Occupation</dt><dd>Many are retired or close to it. A retired nurse, a former bodybuilder, a school employee.</dd></div>
+    </dl>
+    <div class="flag" style="margin-top:18px">
+      <h3>The assumption I dropped</h3>
+      <p>I started from “Simple = an audience of 35 to 55+”. The users in the feed are older. That can affect tone, imagery, what we assume about mobility, and how detailed in-app instructions need to be.</p>
+    </div>
+  </div>
+  <div class="pane" data-lang="ru" hidden>
+    <div class="eyebrow"><i>03</i> Аудитория</div>
+    <h2>Аудитория на двадцать лет старше, чем я предполагала</h2>
+    <dl class="rows">
+      <div class="row"><dt>Возраст</dt><dd><b>60–80+, ядро 66–72.</b> Прямые самоназвания в ленте: 72, 67, 67, 66, 66, 66, 67 и «мне за 80».</dd></div>
+      <div class="row"><dt>Пол</dt><dd>Преимущественно женщины, но есть и мужчины: David, Larry, Bennie, Bear, Jerry, Jennie.</dd></div>
+      <div class="row"><dt>География</dt><dd>США — мили, фунты, страховка как канал дистрибуции, Apple Maps с американскими улицами, верхний Мичиган. Есть и метрические рынки: Lis считает в кг, Jan просила переключить на кг.</dd></div>
+      <div class="row"><dt>Занятость</dt><dd>Много на пенсии или около. Медсестра на пенсии, бывшая бодибилдерша, сотрудница школы.</dd></div>
+    </dl>
+    <div class="flag" style="margin-top:18px">
+      <h3>Гипотеза, которую я сняла</h3>
+      <p>Я заходила с предположением «Simple = аудитория от 35 до 55+». Юзеры в ленте старше. Это может влиять на тон, визуал, допущения о мобильности и на то, насколько подробными должны быть инструкции.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 4 ============ -->
+<section class="slide" id="s4" hidden>
+  <div class="pane" data-lang="en">
+    <div class="eyebrow"><i>04</i> Segments</div>
+    <h2>At least five jobs, but it's early for conclusions</h2>
+    <p class="lead">A forty-minute slice already shows five different jobs. They need different promises.</p>
+    <ol class="steps">
+      <li><span><b>Classic weight loss.</b> Most people come to lose weight.</span></li>
+      <li><span><b>Keeping the weight off.</b> Connie: “already lost significantly, now I want to hold it.”</span></li>
+      <li><span><b>Recovery after illness or surgery.</b> Delores: a year effectively housebound, “barely ate anything and still gained.”</span></li>
+      <li><span><b>Reporting to a doctor.</b> S: medical problems; the app keeps her accountable with her care team, which led to lab tests and a new prescription.</span></li>
+      <li><span><b>Getting ready for an event.</b> Julie: Vegas, a bachelorette, a family wedding — “committed through December.”</span></li>
+    </ol>
+    <div class="card" style="margin-top:16px">
+      <h3>Where CRM can use this</h3>
+      <p>Look at the goal segments from quiz answers and test personalization against them. On this sample it is a direction to check, not a conclusion.</p>
+    </div>
+  </div>
+  <div class="pane" data-lang="ru" hidden>
+    <div class="eyebrow"><i>04</i> Сегменты</div>
+    <h2>Минимум пять задач, но выводы делать рано</h2>
+    <p class="lead">В сорокаминутном срезе видно минимум пять разных задач. Им нужны разные обещания.</p>
+    <ol class="steps">
+      <li><span><b>Классическое похудение.</b> Большинство приходит худеть.</span></li>
+      <li><span><b>Удержание после похудения.</b> Connie: «уже сбросила значительно, теперь хочу удержать».</span></li>
+      <li><span><b>Восстановление после болезни или операции.</b> Delores: год фактически прикована к дому, «почти ничего не ела и всё равно набирала».</span></li>
+      <li><span><b>Отчётность перед врачом.</b> S: медицинские проблемы; приложение держит accountability с медицинской командой, это привело к сдаче анализов и новому назначению.</span></li>
+      <li><span><b>Подготовка к событию.</b> Julie: Вегас, девичник, семейная свадьба — «пробую с верностью до декабря».</span></li>
+    </ol>
+    <div class="card" style="margin-top:16px">
+      <h3>Какая польза для CRM</h3>
+      <p>Посмотреть сегменты по целям из ответов в квизе и протестировать на них персонализацию. На этой выборке это направление для проверки, а не вывод.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 5 ============ -->
+<section class="slide" id="s5" hidden>
+  <div class="pane" data-lang="en">
+    <div class="eyebrow"><i>05</i> Where people drop off</div>
+    <h2>People compare their results with other people's</h2>
+    <p class="lead">Users want fast results and measure themselves against someone else's fast start while their own progress is going normally.</p>
+    <div class="grid g2">
+      <div class="card">
+        <h3>The most discussed post in the sample</h3>
+        <blockquote>I know I've lost weight and it's staying off — the disappointment just creeps in.<cite>LJ · week two, −2.7 lb · 18 likes, 22 comments</cite></blockquote>
+        <p style="margin-top:12px; color:var(--ink-2)">She names the trigger herself: reading other people's posts about a fast start.</p>
+      </div>
+      <div class="card">
+        <h3>The same shape three more times</h3>
+        <ul class="plain">
+          <li><b>Deb</b> — a week of full compliance, no sugar, fasts: <b>+0.5 lb.</b> “Just venting, thanks for listening.”</li>
+          <li><b>Lori</b> — “the scale goes the wrong way no matter what I do on my own.”</li>
+          <li><b>Janice</b> — 250+ days, lost 10 lb and gained it back; openly doubts other people's numbers.</li>
+        </ul>
+      </div>
+    </div>
+    <div class="card" style="margin-top:14px; border-left:3px solid var(--accent)">
+      <p><b>What to do with it:</b> test handling this objection in the emails. There is no single norm, results differ from person to person, and what works is regularity. The app already shows what to do each day — that is the part worth saying out loud.</p>
+    </div>
+  </div>
+  <div class="pane" data-lang="ru" hidden>
+    <div class="eyebrow"><i>05</i> Точка оттока</div>
+    <h2>Люди сравнивают свои результаты с чужими</h2>
+    <p class="lead">Пользователи хотят быстрых результатов и сравнивают себя с чужими быстрыми стартами, когда собственный прогресс идёт нормально.</p>
+    <div class="grid g2">
+      <div class="card">
+        <h3>Самый обсуждаемый пост выборки</h3>
+        <blockquote>Я знаю, что похудела, и вес держится, — просто накатывает разочарование.<cite>LJ · вторая неделя, −2.7 фунта · 18 лайков, 22 комментария</cite></blockquote>
+        <p style="margin-top:12px; color:var(--ink-2)">Триггер она называет сама: чтение чужих постов о быстром старте.</p>
+      </div>
+      <div class="card">
+        <h3>Та же форма ещё трижды</h3>
+        <ul class="plain">
+          <li><b>Deb</b> — неделя полного соблюдения, отказ от сахара, фасты: <b>+0.5 фунта.</b> «Просто выговариваюсь, спасибо, что слушаете».</li>
+          <li><b>Lori</b> — «шкала идёт не в ту сторону, что бы я ни делала сама».</li>
+          <li><b>Janice</b> — 250+ дней, сбросила 10 фунтов и набрала обратно; открыто сомневается в чужих результатах.</li>
+        </ul>
+      </div>
+    </div>
+    <div class="card" style="margin-top:14px; border-left:3px solid var(--accent)">
+      <p><b>Что с этим делать:</b> протестировать отработку этого возражения в письмах. Единой нормы нет, результаты у всех разные, работает регулярность. Приложение как раз показывает, что делать каждый день, — это и стоит проговаривать.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 6 ============ -->
+<section class="slide" id="s6" hidden>
+  <div class="pane" data-lang="en">
+    <div class="eyebrow"><i>06</i> Gamification</div>
+    <h2>Blinky: the reward works, the punishment irritates</h2>
+    <p class="lead">Reactions to the mascot differ, but one complaint repeats: the punishment is out of proportion to what the person did.</p>
+    <div class="grid g2">
+      <div class="card">
+        <span class="tag neg">Punishment</span>
+        <ul class="plain" style="margin-top:12px">
+          <li><b>Deb</b> went 5 kcal over target → orange. Thread: 18 likes, 8 comments, all along the lines of “this is ridiculous.”</li>
+          <li><b>Jennie</b> — the “fuzzy Blinky” creates stress for everyone by changing color and being sad-and-cross about people's choices. 25 likes, one of the most-liked posts in the sample.</li>
+          <li><b>Vinnie</b> puts the fix precisely: it should be a window, not a hard number.</li>
+          <li><b>Missie</b> — “I like the program, I don't like Blinky.” It reminds her to log what she already logged and suggests eating late at night, though she has eaten twice a day all her life.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <span class="tag">Reward → identity</span>
+        <ul class="plain" style="margin-top:12px">
+          <li><b>Dawn</b> posts: “Blinky was happy with me today — kept him green all day.”</li>
+          <li><b>Theresa</b> — getting happy faces from the fuzzy guy is nice, it's a reward.</li>
+          <li><b>David</b> is collecting gems: 497, and 500 after an evening walk — “then I'm sending Blinky on indefinite vacation.”</li>
+        </ul>
+      </div>
+    </div>
+    <div class="card" style="margin-top:14px; border-left:3px solid var(--accent)">
+      <p>An attainable threshold with a visible reward works and generates posts. Punishment for going slightly over the target produces rejection. The thresholds are probably worth recalibrating.</p>
+    </div>
+  </div>
+  <div class="pane" data-lang="ru" hidden>
+    <div class="eyebrow"><i>06</i> Геймификация</div>
+    <h2>Blinky: поощрение работает, наказание раздражает</h2>
+    <p class="lead">Реакция на маскота разная, но одна претензия повторяется: наказание непропорционально поступку.</p>
+    <div class="grid g2">
+      <div class="card">
+        <span class="tag neg">Наказание</span>
+        <ul class="plain" style="margin-top:12px">
+          <li><b>Deb</b> превысила цель на 5 ккал → оранжевый. Тред: 18 лайков, 8 комментариев, все в духе «это смешно».</li>
+          <li><b>Jennie</b> — «пушистый Blinky» создаёт всеобщий стресс сменой цвета и «грустно-сердитым отношением» к чужому выбору. 25 лайков, один из самых залайканных постов выборки.</li>
+          <li><b>Vinnie</b> формулирует решение точно: должно быть окно, а не жёсткое число.</li>
+          <li><b>Missie</b> — «программа нравится, Blinky — нет». Напоминает залогировать уже залогированное и предлагает есть поздно ночью, хотя она всю жизнь ест дважды в день.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <span class="tag">Поощрение → идентичность</span>
+        <ul class="plain" style="margin-top:12px">
+          <li><b>Dawn</b> постит: «Blinky сегодня мной доволен, продержала его зелёным весь день».</li>
+          <li><b>Theresa</b> — получать счастливые рожицы от пушистика приятно, это награда.</li>
+          <li><b>David</b> копит гемы: 497, после вечерней прогулки будет 500 — «отправлю Blinky в бессрочный отпуск».</li>
+        </ul>
+      </div>
+    </div>
+    <div class="card" style="margin-top:14px; border-left:3px solid var(--accent)">
+      <p>Достижимый порог с видимым поощрением работает и порождает посты. Наказание за небольшое превышение нормы вызывает отторжение. Возможно, стоит откалибровать пороги.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 7 ============ -->
+<section class="slide" id="s7" hidden>
+  <div class="pane" data-lang="en">
+    <div class="eyebrow"><i>07</i> The community</div>
+    <h2>What the community says under the post</h2>
+    <p class="lead">Under LJ's post the community works through disappointment with the product on its own. Four things show up in the answers:</p>
+    <ol class="steps">
+      <li><span><b>A need to know the norm and the deviation from it.</b> Roxy: a pound a week is normal, so 2.7 in two weeks is on schedule. Laura: a pound a week means it's mass coming off, not water.</span></li>
+      <li><span><b>A need to understand how weight loss works.</b> Jan: sometimes it's inches, not pounds. Theresa: watch the clothes. Tamara: clothes loosen before the scale moves.</span></li>
+      <li><span><b>A personal example.</b> Tamara: “there is no straight line in weight loss” — and she gained 5 lb in her own first two weeks. Sandra: 70+ days, −14 lb, “slow and steady after the first ten days.”</span></li>
+      <li><span><b>A conversation about expectations.</b> Linda: “I'm curious — what expectation disappointed you?”</span></li>
+    </ol>
+    <div class="flag" style="margin-top:16px">
+      <h3>What I didn't see</h3>
+      <p>Not one “don't give up” in the whole thread. Worth thinking about: educational material could reach this audience in its own language and with its own devices.</p>
+    </div>
+  </div>
+  <div class="pane" data-lang="ru" hidden>
+    <div class="eyebrow"><i>07</i> Комьюнити</div>
+    <h2>Что комьюнити говорит под постом</h2>
+    <p class="lead">Под постом LJ комьюнити само прорабатывает разочарование в продукте. В ответах видно четыре вещи:</p>
+    <ol class="steps">
+      <li><span><b>Потребность в понимании нормы и отклонения от неё.</b> Roxy: фунт в неделю — норма, значит 2.7 за две недели — ты по графику. Laura: фунт в неделю означает, что уходит масса, а не вода.</span></li>
+      <li><span><b>Потребность понимать, как работает похудение.</b> Jan: иногда уходят не фунты, а сантиметры. Theresa: смотри на одежду. Tamara: одежда сядет свободнее раньше, чем сдвинутся весы.</span></li>
+      <li><span><b>Личный пример.</b> Tamara: «прямой линии в похудении не бывает» — и сама набрала 5 фунтов в первые две недели. Sandra: 70+ дней, −14 фунтов, «медленно и ровно после первых десяти дней».</span></li>
+      <li><span><b>Разговор про ожидания.</b> Linda: «Мне любопытно, какое ожидание тебя расстроило?»</span></li>
+    </ol>
+    <div class="flag" style="margin-top:16px">
+      <h3>Чего не заметила</h3>
+      <p>Ни одного «не сдавайся» на весь тред. На подумать: доносить обучающие материалы до аудитории её же языком и приёмами.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 8 ============ -->
+<section class="slide" id="s8" hidden>
+  <div class="pane" data-lang="en">
+    <div class="eyebrow"><i>08</i> Three more findings</div>
+    <h2>Three more useful things from the feed</h2>
+    <div class="grid" style="gap:16px">
+      <div class="card">
+        <h3>01 · Fasting means fewer decisions, not less food</h3>
+        <p style="color:var(--ink-2)">Anne came in planning to skip fasting — “I can't do that, I'm hungry all the time.” It ended up being her best tool, for a reason ads don't use:</p>
+        <blockquote>16 hours where I don't have to think about what to eat next. It's relaxing, and I burn fat while sipping tea.<cite>Anne</cite></blockquote>
+        <p style="margin-top:12px">For people who have counted and slipped for decades, the value is in deciding less rather than eating less.</p>
+      </div>
+      <div class="card">
+        <h3>02 · Permission to be imprecise works better than precision</h3>
+        <p style="color:var(--ink-2)">The support that lands best in the whole sample is Janice (197-day streak) answering Tammy, who was agonizing over how to log her homemade tea:</p>
+        <blockquote>Don't sweat it, it's not worth the mental effort. You don't have to be perfect and log perfectly. The only thing that actually affects your drink is the sugar.<cite>Janice · 197-day streak, −25 lb</cite></blockquote>
+      </div>
+      <div class="card">
+        <h3>03 · A support gap the community covers</h3>
+        <p style="color:var(--ink-2)">Units of measurement, a name instead of a number, connecting steps, replying to a post, finding the fasting setting. On one of these Jennifer answers with seven literal steps.</p>
+        <p>Worth taking into instructions: for an older audience any action needs a step-by-step walk through the screens. Not “adjust it in your profile,” but “open the home screen → scroll down → tap on the left.”</p>
+      </div>
+    </div>
+  </div>
+  <div class="pane" data-lang="ru" hidden>
+    <div class="eyebrow"><i>08</i> Ещё три находки</div>
+    <h2>Ещё три полезности из ленты</h2>
+    <div class="grid" style="gap:16px">
+      <div class="card">
+        <h3>01 · Фастинг — меньше решений, а не меньше еды</h3>
+        <p style="color:var(--ink-2)">Anne пришла с намерением пропустить фастинг — «я так не могу, я всё время голодная». В итоге IF стал лучшим инструментом, и причина такая, про которую не пишут в рекламе:</p>
+        <blockquote>16 часов, когда не нужно думать, что съесть следующим. Это расслабляет, и я сжигаю жир, попивая чай.<cite>Anne</cite></blockquote>
+        <p style="margin-top:12px">Для людей, которые всю жизнь считали и срывались, ценность в том, чтобы меньше решать, а не меньше есть.</p>
+      </div>
+      <div class="card">
+        <h3>02 · Разрешение быть неточным работает лучше точности</h3>
+        <p style="color:var(--ink-2)">Самая понятная аудитории поддержка во всей выборке — ответ Janice (197 стриков) на мучения Tammy с логированием домашнего чая:</p>
+        <blockquote>Не парься, это не стоит умственных усилий. Не нужно быть идеальной и логировать идеально. Единственное, что реально влияет на твой напиток, — сахар.<cite>Janice · стрик 197 дней, −25 фунтов</cite></blockquote>
+      </div>
+      <div class="card">
+        <h3>03 · Вакуум поддержки, который закрывает комьюнити</h3>
+        <p style="color:var(--ink-2)">Единицы измерения, имя вместо номера, подключение шагов, ответ на пост, поиск фастинга. На один из этих вопросов Jennifer отвечает инструкцией из семи буквальных шагов.</p>
+        <p>Можно забрать для инструкций: для старшей аудитории любое действие должно сопровождаться пошаговой инструкцией по экранам. Не «настройте в профиле», а «откройте главный экран → прокрутите вниз → нажмите слева».</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 9 ============ -->
+<section class="slide" id="s9" hidden>
+  <div class="pane" data-lang="en">
+    <div class="eyebrow"><i>09</i> Next</div>
+    <h2>What could be tested</h2>
+    <div class="grid g2">
+      <div class="card">
+        <h3>Test backlog</h3>
+        <ol class="steps">
+          <li><span><b>“The weight has stalled”</b> — how to get through a plateau</span></li>
+          <li><span><b>“Your event is coming up”</b> — a wedding, a trip, a reunion</span></li>
+          <li><span><b>Keeping the weight off</b> as a separate goal with its own track</span></li>
+          <li><span><b>Step-by-step instructions</b> in every email that asks for an action in the app</span></li>
+          <li><span><b>Drinks as a content format</b> — infusions, teas, flavored water. No cooking, no calories, easy to forward. One of the two most-liked recipe posts in the sample (22 likes) was an infused-water recipe carried over from another app</span></li>
+          <li><span><b>More attention to protein</b> — users sign their meals with grams of protein, and it's a big trend in the US</span></li>
+          <li><span><b>Result framed as</b> energy, clothes fitting loosely again, better quality of life, staying healthy later in life</span></li>
+        </ol>
+      </div>
+      <div class="card">
+        <h3>What this sample doesn't answer</h3>
+        <ul class="plain">
+          <li><b>Simple's own communications</b> — a separate topic to discuss</li>
+          <li><b>Churn</b> — store reviews, Reddit, Trustpilot</li>
+          <li><b>Price and the purchase moment</b> — the funnel and paywall screens</li>
+          <li><b>A check on the real base</b> — everything above comes from a public feed, so these are hypotheses rather than facts</li>
+        </ul>
+      </div>
+    </div>
+    <div class="cover" style="padding-block:0">
+      <div class="byline"><span><b>Elena</b></span><span>elenkar14@gmail.com</span><span>Happy to walk through the original 58 screens</span></div>
+    </div>
+  </div>
+  <div class="pane" data-lang="ru" hidden>
+    <div class="eyebrow"><i>09</i> Дальше</div>
+    <h2>Что можно протестировать</h2>
+    <div class="grid g2">
+      <div class="card">
+        <h3>Бэклог тестов</h3>
+        <ol class="steps">
+          <li><span><b>«Вес встал»</b> — как преодолеть плато</span></li>
+          <li><span><b>«Ваше событие впереди»</b> — свадьба, поездка, встреча выпускников</span></li>
+          <li><span><b>Удержание веса</b> как отдельная цель со своей веткой</span></li>
+          <li><span><b>Пошаговые инструкции</b> в каждом письме с действием в приложении</span></li>
+          <li><span><b>Напитки как контент-формат</b> — настои, чаи, вода со вкусом. Ноль готовки, ноль калорий, легко переслать. Один из двух самых залайканных рецептных постов выборки (22 лайка) — рецепт infused water, затащенный из чужого приложения</span></li>
+          <li><span><b>Больше внимания белку</b> — пользователи подписывают свою еду граммами белка, в США это большой тренд</span></li>
+          <li><span><b>Результат через</b> энергию, одежду, которая снова свободно сидит, качество жизни и здоровье во взрослом возрасте</span></li>
+        </ol>
+      </div>
+      <div class="card">
+        <h3>На что эта выборка не отвечает</h3>
+        <ul class="plain">
+          <li><b>Коммуникации Simple</b> — отдельная тема для обсуждения</li>
+          <li><b>Отток</b> — отзывы в сторах, Reddit, Trustpilot</li>
+          <li><b>Цена и момент покупки</b> — воронка и экраны пейволла</li>
+          <li><b>Проверка на реальной базе</b> — всё выше взято из публичной ленты, это гипотезы, а не факты</li>
+        </ul>
+      </div>
+    </div>
+    <div class="cover" style="padding-block:0">
+      <div class="byline"><span><b>Елена</b></span><span>elenkar14@gmail.com</span><span>Готова пройтись по исходным 58 скринам</span></div>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<nav class="nav" aria-label="Slides">
+  <button class="arrow" id="prev" type="button">← <span id="prevLbl">Back</span></button>
+  <div class="dots" id="dots"></div>
+  <button class="arrow" id="next" type="button"><span id="nextLbl">Next</span> →</button>
+</nav>
+
+<script>
+(function(){
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide'));
+  var dotsWrap = document.getElementById('dots');
+  var prev = document.getElementById('prev'), next = document.getElementById('next');
+  var enBtn = document.getElementById('lang-en'), ruBtn = document.getElementById('lang-ru');
+  var i = 0, lang = 'en';
+
+  var LBL = {en:{back:'Back', next:'Next'}, ru:{back:'Назад', next:'Дальше'}};
+
+  slides.forEach(function(s, n){
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.setAttribute('aria-label', 'Slide ' + (n+1));
+    b.addEventListener('click', function(){ go(n); });
+    dotsWrap.appendChild(b);
+  });
+  var dots = Array.prototype.slice.call(dotsWrap.children);
+
+  function go(n){
+    i = Math.max(0, Math.min(slides.length - 1, n));
+    slides.forEach(function(s, k){ s.hidden = (k !== i); });
+    dots.forEach(function(d, k){ d.setAttribute('aria-current', k === i ? 'true' : 'false'); });
+    prev.disabled = (i === 0);
+    next.disabled = (i === slides.length - 1);
+    window.scrollTo({top: 0, behavior: 'auto'});
+    try { localStorage.setItem('sf_slide', String(i)); } catch(e){}
+  }
+
+  function setLang(l){
+    lang = l;
+    document.querySelectorAll('.pane').forEach(function(p){ p.hidden = (p.getAttribute('data-lang') !== l); });
+    document.querySelectorAll('[data-en]').forEach(function(el){ el.textContent = el.getAttribute('data-' + l); });
+    enBtn.setAttribute('aria-pressed', l === 'en' ? 'true' : 'false');
+    ruBtn.setAttribute('aria-pressed', l === 'ru' ? 'true' : 'false');
+    document.getElementById('prevLbl').textContent = LBL[l].back;
+    document.getElementById('nextLbl').textContent = LBL[l].next;
+    try { localStorage.setItem('sf_lang', l); } catch(e){}
+  }
+
+  prev.addEventListener('click', function(){ go(i - 1); });
+  next.addEventListener('click', function(){ go(i + 1); });
+  document.addEventListener('keydown', function(e){
+    if (e.target && /INPUT|TEXTAREA/.test(e.target.tagName)) return;
+    if (e.key === 'ArrowRight' || e.key === 'PageDown') go(i + 1);
+    if (e.key === 'ArrowLeft' || e.key === 'PageUp') go(i - 1);
+  });
+  enBtn.addEventListener('click', function(){ setLang('en'); });
+  ruBtn.addEventListener('click', function(){ setLang('ru'); });
+
+  var l0 = 'en', s0 = 0;
+  try {
+    var sl = localStorage.getItem('sf_lang'); if (sl === 'en' || sl === 'ru') l0 = sl;
+    var ss = parseInt(localStorage.getItem('sf_slide'), 10); if (!isNaN(ss)) s0 = ss;
+  } catch(e){}
+  setLang(l0);
+  go(s0);
+})();
+</script>
+</body>
+</html>
