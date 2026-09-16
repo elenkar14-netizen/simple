@@ -4,7 +4,7 @@
 Портрет комьюнити, наблюдения по механикам продукта и гипотезы для CRM.
 Две языковые версии — переключатель EN / RU в шапке.
 
-**Смотреть:** https://USERNAME.github.io/simple-team-feed-research/
+**Смотреть:** https://elenkar14-netizen.github.io/simple-team-feed-research/
 
 ---
 
